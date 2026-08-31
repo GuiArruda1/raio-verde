@@ -37,13 +37,14 @@ get_header();
 		$vid_url   = get_field('portfolio_video_url');
 		
 		// BTS
-		$bts_t1 = get_field('portfolio_bts_title_1') ?: 'Behind';
-		$bts_t2 = get_field('portfolio_bts_title_2') ?: 'the Scenes';
+		$bts_t1 = get_field('portfolio_bts_title_1');
+		$bts_t2 = get_field('portfolio_bts_title_2');
 		$bts_desc = get_field('portfolio_bts_description');
 		$bts_img_1 = get_field('portfolio_bts_img_1');
 		$bts_img_2 = get_field('portfolio_bts_img_2');
 		$bts_img_3 = get_field('portfolio_bts_img_3');
 		$bts_img_4 = get_field('portfolio_bts_img_4');
+		$has_bts   = ( $bts_t1 || $bts_t2 || $bts_desc || $bts_img_1 || $bts_img_2 || $bts_img_3 || $bts_img_4 );
 		?>
 		<article id="post-<?php the_ID(); ?>" <?php post_class('single-portfolio layout-' . esc_attr($layout_type)); ?>>
 
@@ -130,28 +131,36 @@ get_header();
 			<?php endif; ?>
 
 			<!-- 5. Behind the Scenes -->
+			<?php if ( $has_bts ) : ?>
 			<section class="portfolio-bts-section">
 				<div class="portfolio-bts-wrapper">
+					<?php if ( $bts_t1 || $bts_t2 || $bts_desc ) : ?>
 					<div class="bts-text">
+						<?php if ( $bts_t1 || $bts_t2 ) : ?>
 						<h2 class="bts-title">
-							<span class="bts-title-regular"><?php echo esc_html($bts_t1); ?></span>
-							<br>
-							<span class="bts-title-italic"><?php echo esc_html($bts_t2); ?></span>
+							<?php if ( $bts_t1 ) : ?><span class="bts-title-regular"><?php echo esc_html($bts_t1); ?></span><?php endif; ?>
+							<?php if ( $bts_t1 && $bts_t2 ) : ?><br><?php endif; ?>
+							<?php if ( $bts_t2 ) : ?><span class="bts-title-italic"><?php echo esc_html($bts_t2); ?></span><?php endif; ?>
 						</h2>
+						<?php endif; ?>
 						<?php if($bts_desc): ?>
 							<div class="bts-description">
 								<?php echo wpautop(wp_kses_post($bts_desc)); ?>
 							</div>
 						<?php endif; ?>
 					</div>
+					<?php endif; ?>
+					<?php if ( $bts_img_1 || $bts_img_2 || $bts_img_3 || $bts_img_4 ) : ?>
 					<div class="bts-images-grid">
 						<?php if($bts_img_1): ?><div class="bts-img" style="background-image:url('<?php echo esc_url($bts_img_1); ?>')"></div><?php endif; ?>
 						<?php if($bts_img_2): ?><div class="bts-img" style="background-image:url('<?php echo esc_url($bts_img_2); ?>')"></div><?php endif; ?>
 						<?php if($bts_img_3): ?><div class="bts-img" style="background-image:url('<?php echo esc_url($bts_img_3); ?>')"></div><?php endif; ?>
 						<?php if($bts_img_4): ?><div class="bts-img" style="background-image:url('<?php echo esc_url($bts_img_4); ?>')"></div><?php endif; ?>
 					</div>
+					<?php endif; ?>
 				</div>
 			</section>
+			<?php endif; ?>
 
 		</article><!-- #post-<?php the_ID(); ?> -->
 		<?php
