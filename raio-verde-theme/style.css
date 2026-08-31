@@ -3091,7 +3091,7 @@ body.error404 .site-header.is-scrolled {
 .portfolio-mid-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    height: 70vh;
+    height: clamp(550px, 47.92vw, 920px);
 }
 
 .mid-img {
@@ -3104,7 +3104,7 @@ body.error404 .site-header.is-scrolled {
 .portfolio-mid-horizontal-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    height: 60vh;
+    height: clamp(500px, 47.92vw, 920px);
 }
 
 .mid-horiz-img {
@@ -3338,6 +3338,7 @@ body.error404 .site-header.is-scrolled {
     .portfolio-mid-horizontal-grid {
         display: flex;
         flex-direction: column;
+        height: auto;
     }
 
     .mid-img,
