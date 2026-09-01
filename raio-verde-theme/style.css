@@ -3063,6 +3063,30 @@ body.error404 .site-header.is-scrolled {
     max-width: 600px;
 }
 
+.portfolio-category-link-wrapper {
+    margin-top: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.portfolio-category-link {
+    color: var(--color-black);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    font-size: 0.85rem;
+    text-transform: lowercase;
+    font-family: var(--font-body);
+    font-weight: 300;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    transition: color 0.3s ease;
+}
+
+.portfolio-category-link:hover {
+    color: #666;
+}
+
 .meta-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -3406,6 +3430,16 @@ body.single-portfolio .site-header.is-scrolled {
 /* Keep light blur on scroll instead of dark */
 body.single-portfolio .site-header.is-scrolled::before {
     background-color: rgba(255, 255, 255, 0.95);
+}
+
+/* Force dark (black) logo on single portfolio header regardless of scroll state */
+body.single-portfolio .site-header .site-branding .light-logo {
+    display: none !important;
+}
+
+body.single-portfolio .site-header .site-branding .dark-logo {
+    display: inline-block !important;
+    color: var(--color-black) !important;
 }
 
 /* Hide desktop menu items on single portfolio */
