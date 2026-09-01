@@ -146,8 +146,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (matchedChild) {
-                    e.preventDefault();
                     const parentSlug = matchedChild.getAttribute('data-parent-slug');
+                    const isTaxonomyArchive = window.location.pathname.includes('/portfolio_category/');
+
+                    // If on a taxonomy archive page (/portfolio_category/*) and clicking a different parent category,
+                    // let the browser navigate naturally to load that category's posts from WordPress
+                    if (isTaxonomyArchive && href && href !== '#' && !href.includes(parentSlug)) {
+                        return;
+                    }
+
+                    e.preventDefault();
                     const isAlreadyActive = link.closest('li')?.classList.contains('current-menu-item');
 
                     if (isAlreadyActive) {
