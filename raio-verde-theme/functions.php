@@ -169,6 +169,16 @@ function raio_verde_flush_rewrite_rules_once() {
 add_action( 'init', 'raio_verde_flush_rewrite_rules_once', 99 );
 
 /**
+ * Set portfolio archive and taxonomy queries to 9 posts per page
+ */
+function raio_verde_portfolio_archive_posts_per_page( $query ) {
+	if ( ! is_admin() && $query->is_main_query() && ( $query->is_post_type_archive( 'portfolio' ) || $query->is_tax( 'portfolio_category' ) ) ) {
+		$query->set( 'posts_per_page', 9 );
+	}
+}
+add_action( 'pre_get_posts', 'raio_verde_portfolio_archive_posts_per_page' );
+
+/**
  * Safe wrapper for ACF get_field
  */
 function rv_get_field($selector, $post_id = false, $format_value = true) {

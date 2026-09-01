@@ -65,8 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Reset scroll position
                 gallery.scrollLeft = 0;
 
-                // Step 2: Update layout (hide/show items)
-                portfolioItems.forEach(item => {
+                // Step 2: Update layout (hide/show items dynamically)
+                const currentItems = gallery.querySelectorAll('.portfolio-item');
+                currentItems.forEach(item => {
                     if (filterValue === 'all') {
                         item.classList.remove('hidden');
                     } else {
@@ -79,6 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 });
+
+                if (typeof window.rvUpdateBatchVisibility === 'function') {
+                    window.rvUpdateBatchVisibility();
+                }
 
                 // Step 3: Snappy fade in
                 gallery.classList.remove('is-filtering');
@@ -278,80 +283,125 @@ document.addEventListener('DOMContentLoaded', () => {
         homeObserver.observe(homeLoadMoreBtn.parentElement);
     }
 
-    // Portfolio Archive Mobile Load More (Ajax Pagination)
+    // Portfolio Archive Infinite Scroll (IntersectionObserver)
     const archiveGallery = document.querySelector('.portfolio-archive-gallery');
-    const loadMoreBtn = document.getElementById('mobile-load-more-btn');
+    const sentinel = document.getElementById('portfolio-infinite-sentinel');
     const paginationContainer = document.querySelector('.portfolio-pagination');
 
-    if (archiveGallery && loadMoreBtn && paginationContainer) {
+    if (archiveGallery && sentinel) {
         let isFetching = false;
+        let visibleCount = 9; // Display 9 items initially (3 full rows of 3)
 
-        loadMoreBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (isFetching) return;
+        const updateBatchVisibility = () => {
+            const allItems = Array.from(archiveGallery.querySelectorAll('.portfolio-item'));
+            const matchingItems = allItems.filter(item => !item.classList.contains('hidden'));
 
-            const nextLink = paginationContainer.querySelector('a');
-            if (!nextLink) {
-                loadMoreBtn.style.display = 'none';
-                return;
+            matchingItems.forEach((item, index) => {
+                if (index < visibleCount) {
+                    if (item.classList.contains('is-batch-hidden')) {
+                        item.classList.remove('is-batch-hidden');
+                        item.classList.add('is-revealing');
+                    }
+                } else {
+                    item.classList.add('is-batch-hidden');
+                    item.classList.remove('is-revealing');
+                }
+            });
+
+            const hasMoreDOMItems = matchingItems.length > visibleCount;
+            const hasMorePages = paginationContainer && paginationContainer.querySelector('a');
+
+            if (!hasMoreDOMItems && !hasMorePages) {
+                sentinel.classList.add('is-hidden');
+            } else {
+                sentinel.classList.remove('is-hidden');
             }
+        };
 
-            const fetchUrl = nextLink.href;
-            isFetching = true;
-            loadMoreBtn.classList.add('is-loading');
+        window.rvUpdateBatchVisibility = () => {
+            visibleCount = 9;
+            updateBatchVisibility();
+        };
 
-            fetch(fetchUrl)
-                .then(response => {
-                    if (!response.ok) throw new Error('HTTP error ' + response.status);
-                    return response.text();
-                })
-                .then(htmlString => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(htmlString, 'text/html');
+        // Initial batch setup
+        updateBatchVisibility();
 
-                    // Extract new items
-                    const newItems = doc.querySelectorAll('.portfolio-archive-gallery .portfolio-item');
-                    const newItemsArray = Array.from(newItems);
-                    
-                    if (newItemsArray.length > 0) {
-                        const activeFilter = document.querySelector('.portfolio-filter .filter-link.active');
-                        const activeFilterValue = activeFilter ? activeFilter.getAttribute('data-filter') : 'all';
+        const infiniteObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
 
-                        newItemsArray.forEach((item, index) => {
-                            // Apply active filter state to new items
-                            if (activeFilterValue !== 'all') {
-                                const categories = item.getAttribute('data-categories') || '';
-                                const categoriesArray = categories.split(' ');
-                                if (!categoriesArray.includes(activeFilterValue)) {
-                                    item.classList.add('hidden');
+                const allItems = Array.from(archiveGallery.querySelectorAll('.portfolio-item'));
+                const matchingItems = allItems.filter(item => !item.classList.contains('hidden'));
+                const hasMoreDOMItems = matchingItems.length > visibleCount;
+
+                if (hasMoreDOMItems) {
+                    visibleCount += 9;
+                    updateBatchVisibility();
+                } else if (paginationContainer && !isFetching) {
+                    const nextLink = paginationContainer.querySelector('a');
+                    if (!nextLink) {
+                        sentinel.classList.add('is-hidden');
+                        return;
+                    }
+
+                    isFetching = true;
+                    sentinel.classList.remove('is-hidden');
+
+                    fetch(nextLink.href)
+                        .then(response => {
+                            if (!response.ok) throw new Error('HTTP error ' + response.status);
+                            return response.text();
+                        })
+                        .then(htmlString => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(htmlString, 'text/html');
+
+                            const newItems = doc.querySelectorAll('.portfolio-archive-gallery .portfolio-item');
+                            const newItemsArray = Array.from(newItems);
+
+                            if (newItemsArray.length > 0) {
+                                const activeFilter = document.querySelector('.portfolio-filter-children .filter-link.active');
+                                const activeFilterValue = activeFilter ? activeFilter.getAttribute('data-filter') : 'all';
+
+                                newItemsArray.forEach(item => {
+                                    item.classList.add('is-batch-hidden');
+                                    if (activeFilterValue !== 'all') {
+                                        const categories = item.getAttribute('data-categories') || '';
+                                        const categoriesArray = categories.split(' ');
+                                        if (!categoriesArray.includes(activeFilterValue)) {
+                                            item.classList.add('hidden');
+                                        }
+                                    }
+                                    archiveGallery.appendChild(item);
+                                });
+
+                                const newPagination = doc.querySelector('.portfolio-pagination');
+                                if (newPagination) {
+                                    paginationContainer.innerHTML = newPagination.innerHTML;
+                                } else {
+                                    paginationContainer.innerHTML = '';
                                 }
+
+                                visibleCount += 9;
+                                updateBatchVisibility();
+                            } else {
+                                sentinel.classList.add('is-hidden');
                             }
-                            
-                            // Premium staggered slide-up animation
-                            item.style.animationDelay = `${index * 0.06}s`;
-                            item.classList.add('lazy-loaded');
-                            gallery.appendChild(item);
+                            isFetching = false;
+                        })
+                        .catch(err => {
+                            console.error('Infinite scroll fetch error:', err);
+                            sentinel.classList.add('is-hidden');
+                            isFetching = false;
                         });
-                    }
-
-                    // Extract new pagination link
-                    const newPagination = doc.querySelector('.portfolio-pagination');
-                    if (newPagination && newPagination.querySelector('a')) {
-                        paginationContainer.innerHTML = newPagination.innerHTML;
-                    } else {
-                        paginationContainer.innerHTML = '';
-                        loadMoreBtn.style.display = 'none';
-                    }
-
-                    isFetching = false;
-                    loadMoreBtn.classList.remove('is-loading');
-                })
-                .catch(err => {
-                    console.error('Error loading more portfolios:', err);
-                    isFetching = false;
-                    loadMoreBtn.classList.remove('is-loading');
-                });
+                }
+            });
+        }, {
+            rootMargin: '0px 0px 300px 0px', // Trigger 300px before scroll hits the sentinel
+            threshold: 0.1
         });
+
+        infiniteObserver.observe(sentinel);
     }
 
     // Cookie Banner Logic

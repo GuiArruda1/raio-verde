@@ -110,19 +110,19 @@ if ( is_tax( 'portfolio_category' ) ) {
 			<?php endif; ?>
 		</div>
 
-		<!-- Pagination and Load More for Mobile -->
+		<!-- Infinite Scroll Sentinel & Loader -->
+		<div id="portfolio-infinite-sentinel" class="portfolio-infinite-sentinel <?php echo ($wp_query->max_num_pages <= 1) ? 'is-hidden' : ''; ?>" data-max-pages="<?php echo esc_attr( $wp_query->max_num_pages ); ?>">
+			<div class="infinite-loader-dots">
+				<span></span>
+				<span></span>
+				<span></span>
+			</div>
+		</div>
+
+		<!-- Hidden Pagination Container for Infinite Scroll -->
 		<?php if ( $wp_query->max_num_pages > 1 ) : ?>
 			<div class="portfolio-pagination" style="display: none;">
 				<?php next_posts_link( esc_html__( 'Load More', 'raio-verde' ) ); ?>
-			</div>
-			
-			<div class="portfolio-load-more-container">
-				<button id="mobile-load-more-btn" class="action-link mobile-load-more-btn">
-					<span class="icon"><svg width="21" height="11" viewBox="0 0 21 11" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.4551 10L20.5 6.875L17.4551 3.75M20.5 6.875H2.9359C2.28986 6.875 1.67028 6.61161 1.21346 6.14277C0.756638 5.67393 0.5 5.03804 0.5 4.375V0" stroke="currentColor" stroke-linejoin="round"/></svg></span>
-					<span class="text-wrapper" data-text="<?php esc_attr_e( 'load more', 'raio-verde' ); ?>">
-						<span class="text-original"><?php esc_html_e( 'load more', 'raio-verde' ); ?></span>
-					</span>
-				</button>
 			</div>
 		<?php endif; ?>
 
