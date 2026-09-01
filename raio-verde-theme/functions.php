@@ -158,6 +158,17 @@ function raio_verde_register_portfolio_taxonomies() {
 add_action( 'init', 'raio_verde_register_portfolio_taxonomies', 0 );
 
 /**
+ * Flush rewrite rules once to prevent 404 errors on custom taxonomy URLs
+ */
+function raio_verde_flush_rewrite_rules_once() {
+	if ( get_option( 'raio_verde_flush_rewrite_v2' ) !== '1' ) {
+		flush_rewrite_rules();
+		update_option( 'raio_verde_flush_rewrite_v2', '1' );
+	}
+}
+add_action( 'init', 'raio_verde_flush_rewrite_rules_once', 99 );
+
+/**
  * Safe wrapper for ACF get_field
  */
 function rv_get_field($selector, $post_id = false, $format_value = true) {

@@ -3,10 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const hero = document.querySelector('.hero-section');
     
     // Cache layout threshold outside of scroll listener to prevent layout thrashing (Synchronous Reflow)
-    let threshold = hero ? hero.offsetHeight - header.offsetHeight : 100;
+    // Math.max ensures threshold is never 0 or negative (e.g. when hero has no ACF content set)
+    const getThreshold = () => hero ? Math.max(hero.offsetHeight - header.offsetHeight, 80) : 80;
+    let threshold = getThreshold();
     
     window.addEventListener('resize', () => {
-        threshold = hero ? hero.offsetHeight - header.offsetHeight : 100;
+        threshold = getThreshold();
     });
     
     // Use passive event listener to decouple scroll performance from JavaScript thread
@@ -46,56 +48,183 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Portfolio Archive Client-Side Filtering
-    const filterLinks = document.querySelectorAll('.portfolio-filter .filter-link');
+    // Portfolio Archive Client-Side Filtering (Top Menu = Parents, In-Page = Children)
+    const childFilterLinks = document.querySelectorAll('.portfolio-filter-children .filter-link');
+    const gallery = document.querySelector('.portfolio-archive-gallery');
+    const portfolioItems = document.querySelectorAll('.portfolio-archive-gallery .portfolio-item');
+    const topNavLinks = document.querySelectorAll('.main-navigation a, .desktop-side-menu a');
 
-    if (filterLinks.length > 0) {
-        filterLinks.forEach(link => {
+    if (gallery && portfolioItems.length > 0) {
+        let currentParentFilter = 'all';
+
+        const applyFilter = (filterValue) => {
+            // Step 1: Snappy fade out
+            gallery.classList.add('is-filtering');
+
+            setTimeout(() => {
+                // Reset scroll position
+                gallery.scrollLeft = 0;
+
+                // Step 2: Update layout (hide/show items)
+                portfolioItems.forEach(item => {
+                    if (filterValue === 'all') {
+                        item.classList.remove('hidden');
+                    } else {
+                        const categories = item.getAttribute('data-categories') || '';
+                        const categoriesArray = categories.split(' ');
+                        if (categoriesArray.includes(filterValue)) {
+                            item.classList.remove('hidden');
+                        } else {
+                            item.classList.add('hidden');
+                        }
+                    }
+                });
+
+                // Step 3: Snappy fade in
+                gallery.classList.remove('is-filtering');
+            }, 350);
+        };
+
+        // Filter child category links in the in-page bar based on selected parent
+        const filterChildrenByParent = (parentSlug) => {
+            currentParentFilter = parentSlug;
+            childFilterLinks.forEach(link => {
+                const childParentSlug = link.getAttribute('data-parent-slug');
+                const isAllButton = link.getAttribute('data-filter') === 'all';
+                const parentLi = link.closest('li');
+
+                if (isAllButton) {
+                    link.classList.add('active');
+                    if (parentLi) parentLi.style.display = '';
+                } else if (parentSlug === 'all' || childParentSlug === parentSlug) {
+                    link.classList.remove('active');
+                    if (parentLi) parentLi.style.display = '';
+                } else {
+                    link.classList.remove('active');
+                    if (parentLi) parentLi.style.display = 'none';
+                }
+            });
+        };
+
+        const updateURLParam = (paramValue) => {
+            if (window.history && window.history.pushState) {
+                // Strip out /portfolio_category/slug/ path to convert to clean portfolio archive path
+                let cleanPath = window.location.pathname.replace(/\/portfolio_category\/[^\/]+\/?$/, '/portfolio/');
+                if (!cleanPath.endsWith('/')) cleanPath += '/';
+
+                let newUrl = cleanPath;
+                if (paramValue && paramValue !== 'all') {
+                    newUrl += '?category=' + encodeURIComponent(paramValue);
+                }
+                window.history.pushState({ category: paramValue }, '', newUrl);
+            }
+        };
+
+        // Top Header Navigation: Parent Categories Click Handler
+        topNavLinks.forEach(link => {
             link.addEventListener('click', (e) => {
-                e.preventDefault();
+                const href = link.getAttribute('href') || '';
+                const linkText = link.textContent.trim().toLowerCase();
 
-                // Update active class on filter menu
-                filterLinks.forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
+                // Find matching parent slug from child metadata
+                const matchedChild = Array.from(childFilterLinks).find(c => {
+                    const pSlug = c.getAttribute('data-parent-slug');
+                    return pSlug && (href.includes(pSlug) || linkText.includes(pSlug.replace(/-/g, ' ')) || pSlug.includes(linkText.replace(/[\s&]+/g, '-')));
+                });
 
-                const filterValue = link.getAttribute('data-filter');
-                const gallery = document.querySelector('.portfolio-archive-gallery');
-                const portfolioItems = document.querySelectorAll('.portfolio-archive-gallery .portfolio-item');
+                if (matchedChild) {
+                    e.preventDefault();
+                    const parentSlug = matchedChild.getAttribute('data-parent-slug');
+                    const isAlreadyActive = link.closest('li')?.classList.contains('current-menu-item');
 
+                    if (isAlreadyActive) {
+                        // Deselect parent and restore all
+                        topNavLinks.forEach(l => l.closest('li')?.classList.remove('current-menu-item', 'active'));
+                        filterChildrenByParent('all');
+                        applyFilter('all');
+                        updateURLParam('all');
+                    } else {
+                        // Activate this parent in top header nav
+                        topNavLinks.forEach(l => l.closest('li')?.classList.remove('current-menu-item', 'active'));
+                        link.closest('li')?.classList.add('current-menu-item', 'active');
 
+                        // Filter child buttons to only show children of this parent
+                        filterChildrenByParent(parentSlug);
 
-                if (gallery && portfolioItems.length > 0) {
-                    // Step 1: Snappy fade out
-                    gallery.classList.add('is-filtering');
-
-                    setTimeout(() => {
-                        // Reset scroll position of the carousel to the left
-                        gallery.scrollLeft = 0;
-
-                        // Step 2: Update layout (hide/show items)
-                        portfolioItems.forEach(item => {
-                            if (filterValue === 'all') {
-                                item.classList.remove('hidden');
-                            } else {
-                                const categories = item.getAttribute('data-categories') || '';
-                                const categoriesArray = categories.split(' ');
-                                if (categoriesArray.includes(filterValue)) {
-                                    item.classList.remove('hidden');
-                                } else {
-                                    item.classList.add('hidden');
-                                }
-                            }
-                        });
-
-                        // Step 3: Snappy fade in
-                        gallery.classList.remove('is-filtering');
-                        
-                    }, 350); // Duration matches CSS transition speed
+                        // Apply filter to portfolio items
+                        applyFilter(parentSlug);
+                        updateURLParam(parentSlug);
+                    }
                 }
             });
         });
 
+        // In-Page Child Filter Click Handler
+        childFilterLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const filterValue = link.getAttribute('data-filter');
 
+                if (filterValue === 'all') {
+                    // Complete reset: clear top menu selection, reveal all child options, show all posts
+                    currentParentFilter = 'all';
+                    topNavLinks.forEach(l => l.closest('li')?.classList.remove('current-menu-item', 'active'));
+                    filterChildrenByParent('all');
+                    applyFilter('all');
+                    updateURLParam('all');
+                } else {
+                    childFilterLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    applyFilter(filterValue);
+                    updateURLParam(filterValue);
+                }
+            });
+        });
+
+        // Check initial category from URL query, data attribute, or URL pathname (e.g. /portfolio_category/products-industry/)
+        const filterContainer = document.querySelector('.portfolio-filter-container');
+        const urlParams = new URLSearchParams(window.location.search);
+        let initialCategory = urlParams.get('category') || (filterContainer ? filterContainer.getAttribute('data-initial-term') : '');
+
+        if (!initialCategory) {
+            const pathMatch = window.location.pathname.match(/\/portfolio_category\/([^\/]+)/);
+            if (pathMatch && pathMatch[1]) {
+                initialCategory = pathMatch[1];
+            }
+        }
+
+        if (initialCategory) {
+            // Check if initialCategory is a parent
+            const matchedParentLink = Array.from(topNavLinks).find(link => {
+                const href = link.getAttribute('href') || '';
+                const linkText = link.textContent.trim().toLowerCase();
+                return href.includes(initialCategory) || linkText.includes(initialCategory.replace(/-/g, ' ')) || initialCategory.includes(linkText.replace(/[\s&]+/g, '-'));
+            });
+
+            if (matchedParentLink) {
+                matchedParentLink.closest('li')?.classList.add('current-menu-item', 'active');
+                filterChildrenByParent(initialCategory);
+                applyFilter(initialCategory);
+            } else {
+                // Check if initialCategory is a child
+                const matchedChildLink = Array.from(childFilterLinks).find(c => c.getAttribute('data-filter') === initialCategory);
+                if (matchedChildLink) {
+                    const pSlug = matchedChildLink.getAttribute('data-parent-slug');
+                    if (pSlug) {
+                        filterChildrenByParent(pSlug);
+                        const pLink = Array.from(topNavLinks).find(l => {
+                            const href = l.getAttribute('href') || '';
+                            const linkText = l.textContent.trim().toLowerCase();
+                            return href.includes(pSlug) || linkText.includes(pSlug.replace(/-/g, ' '));
+                        });
+                        pLink?.closest('li')?.classList.add('current-menu-item', 'active');
+                    }
+                    childFilterLinks.forEach(l => l.classList.remove('active'));
+                    matchedChildLink.classList.add('active');
+                    applyFilter(initialCategory);
+                }
+            }
+        }
     }
 
     // Home Portfolio Mobile Load More (CSS reveal)
@@ -137,11 +266,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Portfolio Archive Mobile Load More (Ajax Pagination)
-    const gallery = document.querySelector('.portfolio-archive-gallery');
+    const archiveGallery = document.querySelector('.portfolio-archive-gallery');
     const loadMoreBtn = document.getElementById('mobile-load-more-btn');
     const paginationContainer = document.querySelector('.portfolio-pagination');
 
-    if (gallery && loadMoreBtn && paginationContainer) {
+    if (archiveGallery && loadMoreBtn && paginationContainer) {
         let isFetching = false;
 
         loadMoreBtn.addEventListener('click', (e) => {

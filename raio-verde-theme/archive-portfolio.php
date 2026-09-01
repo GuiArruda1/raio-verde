@@ -6,21 +6,44 @@
 get_header();
 ?>
 
+<?php
+$current_term_slug = '';
+if ( is_tax( 'portfolio_category' ) ) {
+	$queried_obj = get_queried_object();
+	if ( $queried_obj && ! is_wp_error( $queried_obj ) ) {
+		$current_term_slug = $queried_obj->slug;
+	}
+}
+?>
+
 <main id="primary" class="site-main portfolio-archive-main">
 
-	<!-- Filter Menu -->
-	<div class="portfolio-filter-container">
-		<ul class="portfolio-filter">
-			<li><a href="#" class="filter-link active" data-filter="all">all</a></li>
-			<?php
-			$categories = get_terms( array(
-				'taxonomy'   => 'portfolio_category',
-				'hide_empty' => false, // Set to false to see categories even if no posts are assigned yet
-			) );
+	<!-- Filter Menu (Child categories only) -->
+	<div class="portfolio-filter-container" data-initial-term="<?php echo esc_attr( $current_term_slug ); ?>">
+		<?php
+		// Fetch All Categories and filter out top-level parents to get only children
+		$all_categories = get_terms( array(
+			'taxonomy'   => 'portfolio_category',
+			'hide_empty' => false,
+		) );
+		$child_categories = array();
+		if ( ! empty( $all_categories ) && ! is_wp_error( $all_categories ) ) {
+			foreach ( $all_categories as $cat ) {
+				if ( $cat->parent != 0 ) {
+					$child_categories[] = $cat;
+				}
+			}
+		}
+		?>
 
-			if ( ! empty( $categories ) && ! is_wp_error( $categories ) ) {
-				foreach ( $categories as $category ) {
-					echo '<li><a href="#" class="filter-link" data-filter="' . esc_attr( $category->slug ) . '">' . esc_html( $category->name ) . '</a></li>';
+		<ul class="portfolio-filter portfolio-filter-children">
+			<li><a href="#" class="filter-link filter-child active" data-filter="all">all</a></li>
+			<?php
+			if ( ! empty( $child_categories ) ) {
+				foreach ( $child_categories as $child ) {
+					$parent_term = get_term( $child->parent, 'portfolio_category' );
+					$parent_slug = ( $parent_term && ! is_wp_error( $parent_term ) ) ? $parent_term->slug : '';
+					echo '<li><a href="#" class="filter-link filter-child" data-filter="' . esc_attr( $child->slug ) . '" data-parent-slug="' . esc_attr( $parent_slug ) . '">' . esc_html( $child->name ) . '</a></li>';
 				}
 			}
 			?>
@@ -35,14 +58,21 @@ get_header();
 				while ( have_posts() ) :
 					the_post();
 					
-					// Get post terms for filtering
+					// Get post terms for filtering (including parent term slugs)
 					$post_terms = get_the_terms( get_the_ID(), 'portfolio_category' );
 					$term_slugs = array();
 					if ( ! empty( $post_terms ) && ! is_wp_error( $post_terms ) ) {
 						foreach ( $post_terms as $term ) {
 							$term_slugs[] = $term->slug;
+							if ( $term->parent ) {
+								$parent_term = get_term( $term->parent, 'portfolio_category' );
+								if ( $parent_term && ! is_wp_error( $parent_term ) ) {
+									$term_slugs[] = $parent_term->slug;
+								}
+							}
 						}
 					}
+					$term_slugs = array_unique( $term_slugs );
 					$terms_string = implode( ' ', $term_slugs );
 					
 					$img_url = get_the_post_thumbnail_url( get_the_ID(), 'full' );

@@ -76,8 +76,15 @@ get_header();
 	<section class="portfolio-section" id="portfolio">
 		<div class="portfolio-gallery">
 			<?php 
-			// Fetch curated relationship items from the ACF field
+			// Fetch curated relationship items from the ACF field, fallback to latest portfolio posts
 			$curated_portfolios = rv_get_field('front_portfolio_gallery');
+			if ( empty( $curated_portfolios ) ) {
+				$curated_portfolios = get_posts( array(
+					'post_type'      => 'portfolio',
+					'posts_per_page' => 10,
+					'post_status'    => 'publish',
+				) );
+			}
 
 			if ( $curated_portfolios ) :
 				// Strictly limit to 10 items to guarantee the grid layout never breaks
@@ -90,8 +97,7 @@ get_header();
 					// Fallback if no featured image is set
 					if (!$img_url) $img_url = 'https://picsum.photos/seed/' . get_the_ID() . '/1200/800';
 					?>
-					<!-- TEMP FIX FOR LAUNCH: Disable links but keep hover -->
-					<a href="#" onclick="event.preventDefault(); return false;" style="cursor: default;" class="portfolio-item action-link-trigger">
+					<a href="<?php the_permalink(); ?>" class="portfolio-item action-link-trigger">
 						<img src="<?php echo esc_url($img_url); ?>" alt="<?php the_title_attribute(); ?>">
 						<div class="portfolio-overlay">
 							<span class="action-link portfolio-action">
