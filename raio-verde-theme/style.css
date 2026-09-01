@@ -3090,7 +3090,7 @@ body.error404 .site-header.is-scrolled {
     font-family: var(--font-body);
     font-size: 16px;
     line-height: 22px;
-    font-weight: normal;
+    font-weight: 300;
     color: rgb(17, 17, 17);
 }
 
