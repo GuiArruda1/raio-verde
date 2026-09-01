@@ -125,11 +125,19 @@ document.addEventListener('DOMContentLoaded', () => {
             link.addEventListener('click', (e) => {
                 const href = link.getAttribute('href') || '';
                 const linkText = link.textContent.trim().toLowerCase();
+                const cleanText = linkText.replace(/[\s&]+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-                // Find matching parent slug from child metadata
+                // Find matching parent slug from child metadata (strict exact match)
                 const matchedChild = Array.from(childFilterLinks).find(c => {
                     const pSlug = c.getAttribute('data-parent-slug');
-                    return pSlug && (href.includes(pSlug) || linkText.includes(pSlug.replace(/-/g, ' ')) || pSlug.includes(linkText.replace(/[\s&]+/g, '-')));
+                    if (!pSlug) return false;
+                    const cleanParentSlug = pSlug.replace(/[\s&]+/g, '-').replace(/[^a-z0-9-]/g, '');
+                    return (
+                        href.includes('/portfolio_category/' + pSlug) ||
+                        href.includes('category=' + pSlug) ||
+                        cleanText === cleanParentSlug ||
+                        linkText === pSlug.replace(/-/g, ' ')
+                    );
                 });
 
                 if (matchedChild) {
@@ -194,11 +202,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (initialCategory) {
+            const cleanInitCat = initialCategory.replace(/[\s&]+/g, '-').replace(/[^a-z0-9-]/g, '');
+
             // Check if initialCategory is a parent
             const matchedParentLink = Array.from(topNavLinks).find(link => {
                 const href = link.getAttribute('href') || '';
                 const linkText = link.textContent.trim().toLowerCase();
-                return href.includes(initialCategory) || linkText.includes(initialCategory.replace(/-/g, ' ')) || initialCategory.includes(linkText.replace(/[\s&]+/g, '-'));
+                const cleanText = linkText.replace(/[\s&]+/g, '-').replace(/[^a-z0-9-]/g, '');
+                return href.includes('/portfolio_category/' + initialCategory) || href.includes('category=' + initialCategory) || cleanText === cleanInitCat;
             });
 
             if (matchedParentLink) {
@@ -212,10 +223,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const pSlug = matchedChildLink.getAttribute('data-parent-slug');
                     if (pSlug) {
                         filterChildrenByParent(pSlug);
+                        const cleanPSlug = pSlug.replace(/[\s&]+/g, '-').replace(/[^a-z0-9-]/g, '');
                         const pLink = Array.from(topNavLinks).find(l => {
                             const href = l.getAttribute('href') || '';
                             const linkText = l.textContent.trim().toLowerCase();
-                            return href.includes(pSlug) || linkText.includes(pSlug.replace(/-/g, ' '));
+                            const cleanText = linkText.replace(/[\s&]+/g, '-').replace(/[^a-z0-9-]/g, '');
+                            return href.includes('/portfolio_category/' + pSlug) || href.includes('category=' + pSlug) || cleanText === cleanPSlug;
                         });
                         pLink?.closest('li')?.classList.add('current-menu-item', 'active');
                     }
