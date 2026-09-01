@@ -113,13 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const updateURLParam = (paramValue) => {
             if (window.history && window.history.pushState) {
-                // Strip out /portfolio_category/slug/ path to convert to clean portfolio archive path
-                let cleanPath = window.location.pathname.replace(/\/portfolio_category\/[^\/]+\/?$/, '/portfolio/');
-                if (!cleanPath.endsWith('/')) cleanPath += '/';
-
-                let newUrl = cleanPath;
+                let newUrl = '/portfolio/';
                 if (paramValue && paramValue !== 'all') {
-                    newUrl += '?category=' + encodeURIComponent(paramValue);
+                    newUrl = '/portfolio_category/' + encodeURIComponent(paramValue) + '/';
                 }
                 window.history.pushState({ category: paramValue }, '', newUrl);
             }
