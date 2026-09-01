@@ -143,11 +143,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (matchedChild) {
                     const parentSlug = matchedChild.getAttribute('data-parent-slug');
-                    const isTaxonomyArchive = window.location.pathname.includes('/portfolio_category/');
 
-                    // If on a taxonomy archive page (/portfolio_category/*) and clicking a different parent category,
-                    // let the browser navigate naturally to load that category's posts from WordPress
-                    if (isTaxonomyArchive && href && href !== '#' && !href.includes(parentSlug)) {
+                    // Detect if we are currently on a specific taxonomy archive page (/portfolio_category/slug/)
+                    const currentTaxMatch = window.location.pathname.match(/\/portfolio_category\/([^\/]+)/);
+                    const currentTaxSlug = currentTaxMatch ? currentTaxMatch[1] : null;
+
+                    // If currently on a taxonomy archive page and clicking a DIFFERENT parent category,
+                    // navigate to the target category page so WordPress loads its posts
+                    if (currentTaxSlug && currentTaxSlug !== parentSlug) {
+                        if (href && href !== '#' && !href.startsWith('javascript:')) {
+                            window.location.href = href;
+                        } else {
+                            window.location.href = '/portfolio_category/' + encodeURIComponent(parentSlug) + '/';
+                        }
                         return;
                     }
 
